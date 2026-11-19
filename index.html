@@ -463,14 +463,17 @@ async function callClaude(kind, input) {
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let activeRec = null; // {rec, button, textarea, interimEl, listening}
 
+/** 録音を止める．停止後に届く最後の確定結果まで待ってから resolve する */
 function stopRec() {
-  if (!activeRec) return;
-  activeRec.listening = false;
-  try { activeRec.rec.stop(); } catch (e) {}
-  activeRec.button.classList.remove("on");
-  activeRec.button.textContent = "● 録音開始";
-  activeRec.interimEl.textContent = "";
+  const state = activeRec;
+  if (!state) return Promise.resolve();
   activeRec = null;
+  state.listening = false;
+  state.button.classList.remove("on");
+  state.button.textContent = "● 録音開始";
+  const ended = new Promise((resolve) => { state.resolveEnd = resolve; setTimeout(resolve, 2000); });
+  try { state.rec.stop(); } catch (e) { state.resolveEnd(); }
+  return ended.then(() => { state.interimEl.textContent = ""; });
 }
 function startRec(button, textarea, interimEl, msgEl) {
   if (activeRec) stopRec();
@@ -495,7 +498,10 @@ function startRec(button, textarea, interimEl, msgEl) {
     setMsg(msgEl, m, true);
     stopRec();
   };
-  rec.onend = () => { if (state.listening) { try { rec.start(); } catch (e) { stopRec(); } } };
+  rec.onend = () => {
+    if (state.listening) { try { rec.start(); return; } catch (e) { state.listening = false; if (activeRec === state) stopRec(); } }
+    if (state.resolveEnd) state.resolveEnd();
+  };
   try { rec.start(); } catch (e) { setMsg(msgEl, "録音を開始できませんでした", true); return; }
   activeRec = state;
   button.classList.add("on");
@@ -565,7 +571,7 @@ bindMic($("recMic"), $("recText"), $("recInterim"), $("recMsg"));
 if (!SR) $("speechNote").textContent = "このブラウザは音声認識に対応していません．テキストを入力して保存できます（Chrome／Edge 推奨）．";
 
 async function recSave(useAI) {
-  stopRec();
+  await stopRec();
   const date = $("recDate").value || today();
   const entry = await saveText({ date, mode, text: $("recText").value, useAI, msgEl: $("recMsg"),
     buttons: [$("recSummarize"), $("recRaw")] });
@@ -656,7 +662,7 @@ $("detailDelete").addEventListener("click", () => {
 });
 bindMic($("detailMic"), $("detailAppend"), $("detailInterim"), $("detailMsg"));
 async function detailAppend(useAI) {
-  stopRec();
+  await stopRec();
   const e = entries.find((x) => x.id === detailId);
   if (!e) return;
   const saved = await saveText({ date: e.date, mode: e.mode, text: $("detailAppend").value, useAI,
