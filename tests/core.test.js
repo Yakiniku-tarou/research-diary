@@ -163,7 +163,9 @@ test("プロンプト：小見出しの規則とモード別の指示を含む",
     assert.match(p, /話題ごとに小見出しを分け/);
   }
   assert.match(d, /日記/);
-  for (const h of ["### やったこと", "### わかったこと", "### 課題", "### 次にやること"]) assert.ok(r.includes(h), h);
+  assert.match(r, /箇条書き/);
+  assert.match(r, /さらに見出しを作らない/);
+  assert.doesNotMatch(r, /### /, "研究日誌に固定の観点見出しを付けない");
   const w = C.systemPrompt("weekly");
   for (const h of ["## 今週やったこと", "## わかったこと", "## 課題", "## 来週の予定"]) assert.ok(w.includes(h), h);
   assert.throws(() => C.systemPrompt("x"));
