@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>音声研究日誌</title>
+<style>
+  :root {
+    --bg: #f7f6f3; --surface: #ffffff; --text: #1f2328; --muted: #6a6f76;
+    --border: #dedbd4; --accent: #2f6f5e; --accent-text: #ffffff;
+    --research: #2f6f5e; --diary: #b0623a; --danger: #b3261e; --rec: #c62828;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17191c; --surface: #212429; --text: #e8e6e3; --muted: #9aa0a6;
+      --border: #3a3e44; --accent: #5fb39c; --accent-text: #10241e;
+      --research: #5fb39c; --diary: #e0956b; --danger: #ef7b73; --rec: #ef5350;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif; line-height: 1.7; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border); }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+  h1 { font-size: 1.15rem; margin: 0; padding: 14px 0 6px; }
+  nav { display: flex; gap: 4px; overflow-x: auto; }
+  nav button { background: none; border: none; border-bottom: 3px solid transparent; color: var(--muted);
+    padding: 8px 14px; font: inherit; cursor: pointer; white-space: nowrap; }
+  nav button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  main { padding: 20px 0 60px; }
+  section[hidden] { display: none; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+  label { font-size: .9rem; color: var(--muted); }
+  input, textarea, select { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; }
+  textarea { width: 100%; min-height: 140px; resize: vertical; }
+  button.btn { font: inherit; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+  button.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  button.btn.danger { color: var(--danger); }
+  button.btn:disabled { opacity: .45; cursor: not-allowed; }
+  button.btn.rec.on { background: var(--rec); border-color: var(--rec); color: #fff; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button { font: inherit; border: none; background: var(--surface); color: var(--muted); padding: 7px 14px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
+  .muted { color: var(--muted); font-size: .9rem; }
+  .interim { color: var(--muted); min-height: 1.5em; font-size: .95rem; }
+  .msg { font-size: .92rem; margin: 8px 0 0; }
+  .msg.error { color: var(--danger); }
+  .md h2, .md h3, .md h4 { margin: 1em 0 .3em; line-height: 1.4; }
+  .md h2 { font-size: 1.1rem; border-left: 4px solid var(--accent); padding-left: 8px; }
+  .md h3 { font-size: 1rem; }
+  .md h4 { font-size: .95rem; color: var(--muted); }
+  .md > :first-child { margin-top: 0; }
+  .md p { margin: .4em 0; }
+  .md ul { margin: .3em 0; padding-left: 1.4em; }
+  .md hr { border: none; border-top: 1px dashed var(--border); margin: 1em 0; }
+  .md .sep { color: var(--muted); font-size: .85rem; }
+  /* calendar */
+  .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal .dow { text-align: center; font-size: .8rem; color: var(--muted); }
+  .cal button { font: inherit; aspect-ratio: 1 / .85; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg); color: var(--text); cursor: pointer; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 2px; min-width: 0; }
+  .cal button.today { border-color: var(--accent); font-weight: 700; }
+  .cal button.empty { visibility: hidden; }
+  .dots { display: flex; gap: 3px; height: 8px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .dot.research { background: var(--research); }
+  .dot.diary { background: var(--diary); }
+  .legend { display: flex; gap: 14px; font-size: .85rem; color: var(--muted); margin-top: 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .list { list-style: none; margin: 0; padding: 0; }
+  .list li { border-top: 1px solid var(--border); padding: 10px 4px; cursor: pointer; }
+  .list li:first-child { border-top: none; }
+  .list li:hover { background: var(--bg); }
+  .tag { display: inline-block; font-size: .75rem; border-radius: 99px; padding: 0 8px; color: #fff; margin-right: 6px; }
+  .tag.research { background: var(--research); }
+  .tag.diary { background: var(--diary); }
+  @media (prefers-color-scheme: dark) { .tag { color: #111; } }
+  details summary { cursor: pointer; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>音声研究日誌</h1>
+    <nav role="tablist">
+      <button role="tab" data-tab="record" aria-selected="true">記録</button>
+      <button role="tab" data-tab="browse" aria-selected="false">見返す</button>
+      <button role="tab" data-tab="weekly" aria-selected="false">週次報告</button>
+      <button role="tab" data-tab="settings" aria-selected="false">設定</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- 記録 -->
+  <section id="tab-record">
+    <div class="card">
+      <div class="row">
+        <div class="seg" id="modeSeg">
+          <button data-mode="diary" aria-pressed="false">日記</button>
+          <button data-mode="research" aria-pressed="true">研究日誌</button>
+        </div>
+        <input type="date" id="recDate" aria-label="日付">
+        <button class="btn rec" id="recMic">● 録音開始</button>
+      </div>
+      <p class="muted" id="recTarget"></p>
+      <textarea id="recText" placeholder="録音するか，ここに直接入力してください"></textarea>
+      <div class="interim" id="recInterim"></div>
+      <div class="row">
+        <button class="btn primary" id="recSummarize">まとめて保存</button>
+        <button class="btn" id="recRaw">原文のまま保存</button>
+      </div>
+      <p class="msg" id="recMsg"></p>
+      <p class="muted" id="speechNote"></p>
+    </div>
+    <div class="card" id="recResultCard" hidden>
+      <div class="muted" id="recResultTitle"></div>
+      <div class="md" id="recResult"></div>
+    </div>
+  </section>
+
+  <!-- 見返す -->
+  <section id="tab-browse" hidden>
+    <div class="card" id="detailCard" hidden>
+      <div class="row" style="justify-content:space-between">
+        <strong id="detailTitle"></strong>
+        <button class="btn" id="detailClose">閉じる</button>
+      </div>
+      <div class="md" id="detailView"></div>
+      <details style="margin-top:12px">
+        <summary>本文を編集する</summary>
+        <label for="detailSummary">まとめ（Markdown）</label>
+        <textarea id="detailSummary"></textarea>
+        <label for="detailTranscript">原文</label>
+        <textarea id="detailTranscript"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button class="btn primary" id="detailSave">保存</button>
+          <button class="btn danger" id="detailDelete">削除</button>
+        </div>
+      </details>
+      <div style="margin-top:12px">
+        <label for="detailAppend">追記</label>
+        <textarea id="detailAppend" placeholder="追記する内容（録音もできます）" style="min-height:90px"></textarea>
+        <div class="interim" id="detailInterim"></div>
+        <div class="row">
+          <button class="btn rec" id="detailMic">● 録音開始</button>
+          <button class="btn primary" id="detailSummarize">まとめて追記</button>
+          <button class="btn" id="detailRaw">原文のまま追記</button>
+        </div>
+      </div>
+      <p class="msg" id="detailMsg"></p>
+    </div>
+
+    <div class="card">
+      <div class="cal-head">
+        <button class="btn" id="calPrev" aria-label="前の月">‹</button>
+        <strong id="calTitle"></strong>
+        <button class="btn" id="calNext" aria-label="次の月">›</button>
+      </div>
+      <div class="cal" id="cal"></div>
+      <div class="legend">
+        <span><i class="dot research"></i>研究日誌</span>
+        <span><i class="dot diary"></i>日記</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <strong>一覧</strong>
+        <select id="listFilter" aria-label="絞り込み">
+          <option value="all">すべて</option>
+          <option value="research">研究日誌</option>
+          <option value="diary">日記</option>
+        </select>
+      </div>
+      <ul class="list" id="list"></ul>
+    </div>
+  </section>
+
+  <!-- 週次報告 -->
+  <section id="tab-weekly" hidden>
+    <div class="card">
+      <div class="row">
+        <label for="weekBase">基準日</label>
+        <input type="date" id="weekBase">
+        <button class="btn primary" id="weekGen">生成</button>
+      </div>
+      <p class="muted" id="weekRangeNote"></p>
+      <p class="msg" id="weekMsg"></p>
+    </div>
+    <div class="card" id="weekResultCard" hidden>
+      <div class="md" id="weekView"></div>
+      <details style="margin-top:12px">
+        <summary>Markdown の原文</summary>
+        <textarea id="weekText"></textarea>
+      </details>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="weekCopy">コピー</button>
+        <span class="msg" id="weekCopyMsg"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 設定 -->
+  <section id="tab-settings" hidden>
+    <div class="card">
+      <label for="apiKey">Claude API キー</label>
+      <div class="row">
+        <input type="password" id="apiKey" autocomplete="off" placeholder="sk-ant-..." style="flex:1;min-width:220px">
+        <button class="btn primary" id="apiKeySave">保存</button>
+        <button class="btn danger" id="apiKeyDelete">削除</button>
+      </div>
+      <p class="muted" id="apiKeyStatus"></p>
+      <label for="model">モデル</label>
+      <div class="row">
+        <input type="text" id="model" style="flex:1;min-width:220px">
+        <button class="btn" id="modelSave">保存</button>
+      </div>
+      <p class="msg" id="settingsMsg"></p>
+      <p class="muted">APIキーはこのブラウザにだけ保存されます．共有の PC では使わないでください．
+        まとめるときは，文字起こしたテキストだけが Anthropic API に送られます．録音した音声は保存しません
+        （Chrome の音声認識は，Google のサーバーで処理されます）．</p>
+    </div>
+  </section>
+</main>
+
+<script id="core">
+globalThis.Core = (function () {
+  "use strict";
+  const ENTRIES_KEY = "researchDiary.v1.entries";
+  const SETTINGS_KEY = "researchDiary.v1.settings";
+  const DEFAULT_SETTINGS = { apiKey: "", model: "claude-opus-5-5", lastMode: "research" };
+  const MODES = ["diary", "research"];
+  const MODE_LABEL = { diary: "日記", research: "研究日誌" };
+
+  // ---- 日付（ローカル日付の YYYY-MM-DD 文字列で扱う） ----
+  const pad = (n) => String(n).padStart(2, "0");
+  function toDateStr(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+  function parseDate(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
+  function addDays(s, n) { const d = parseDate(s); d.setDate(d.getDate() + n); return toDateStr(d); }
+  function timeStr(now) { return `${pad(now.getHours())}:${pad(now.getMinutes())}`; }
+  function shortDate(s) { const d = parseDate(s); return `${d.getMonth() + 1}/${d.getDate()}`; }
+
+  // ---- 保存 ----
+  function loadEntries(storage) {
+    const raw = storage.getItem(ENTRIES_KEY);
+    if (raw == null) return [];
+    try {
+      const v = JSON.parse(raw);
+      if (!Array.isArray(v)) throw new Error("not array");
+      return v;
+    } catch (e) {
+      storage.setItem(ENTRIES_KEY + ".broken", raw);
+      storage.removeItem(ENTRIES_KEY);
+      return [];
+    }
+  }
+  function saveEntries(storage, entries) { storage.setItem(ENTRIES_KEY, JSON.stringify(entries)); }
+  function loadSettings(storage) {
+    try {
+      const v = JSON.parse(storage.getItem(SETTINGS_KEY) || "{}");
+      return Object.assign({}, DEFAULT_SETTINGS, v && typeof v === "object" ? v : {});
+    } catch (e) { return Object.assign({}, DEFAULT_SETTINGS); }
+  }
+  function saveSettings(storage, s) { storage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+
+  // ---- 記録の操作（配列は変更せず，新しい配列を返す） ----
+  const entryId = (date, mode) => `${date}_${mode}`;
+  function findEntry(entries, date, mode) { return entries.find((e) => e.id === entryId(date, mode)) || null; }
+  const separator = (now) => `\n\n---（${timeStr(now)} 追記）\n\n`;
+  function rawSummary(text, now, appended) {
+    return `## メモ（${timeStr(now)}${appended ? " 追記" : ""}）\n\n${text}`;
+  }
+  /** 追記後の transcript（既存がなければ入力そのもの） */
+  function nextTranscript(existing, text, now) {
+    return existing ? existing.transcript + separator(now) + text : text;
+  }
+  /**
+   * 保存（新規 or 追記）．summary が null なら「原文のまま」．
+   * summary が文字列なら，追記後の transcript 全体から作り直した要約として置き換える．
+   */
+  function upsertEntry(entries, { date, mode, text, summary, now }) {
+    text = String(text || "").trim();
+    if (!text) throw new Error("empty");
+    if (!MODES.includes(mode)) throw new Error("bad mode");
+    const iso = now.toISOString();
+    const existing = findEntry(entries, date, mode);
+    const transcript = nextTranscript(existing, text, now);
+    let newSummary, edited;
+    if (summary != null) { newSummary = ensureHeading(summary); edited = false; }
+    else if (existing) { newSummary = existing.summary + "\n\n" + rawSummary(text, now, true); edited = !!existing.summaryEdited; }
+    else { newSummary = rawSummary(text, now, false); edited = false; }
+    const entry = {
+      id: entryId(date, mode), date, mode, transcript, summary: newSummary, summaryEdited: edited,
+      createdAt: existing ? existing.createdAt : iso, updatedAt: iso,
+    };
+    const rest = entries.filter((e) => e.id !== entry.id);
+    return { entries: rest.concat(entry), entry, appended: !!existing };
+  }
+  function updateEntry(entries, id, { summary, transcript, now }) {
+    return entries.map((e) => {
+      if (e.id !== id) return e;
+      const next = Object.assign({}, e, { updatedAt: now.toISOString() });
+      if (summary != null && summary !== e.summary) { next.summary = summary; next.summaryEdited = true; }
+      if (transcript != null) next.transcript = transcript;
+      return next;
+    });
+  }
+  const deleteEntry = (entries, id) => entries.filter((e) => e.id !== id);
+  function sortedEntries(entries, filter) {
+    return entries
+      .filter((e) => !filter || filter === "all" || e.mode === filter)
+      .slice()
+      .sort((a, b) => (a.date === b.date ? a.mode.localeCompare(b.mode) : a.date < b.date ? 1 : -1));
+  }
+
+  // ---- 週次 ----
+  function weekRange(baseDate) { return { start: addDays(baseDate, -6), end: baseDate }; }
+  function selectWeekEntries(entries, baseDate) {
+    const { start, end } = weekRange(baseDate);
+    return entries
+      .filter((e) => e.mode === "research" && e.date >= start && e.date <= end)
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
+  }
+
+  // ---- プロンプト ----
+  const PROMPTS = {
+    common: "あなたはユーザーの音声メモを整える編集者です．入力は音声認識の結果なので，誤変換やフィラー（えー，あの等）が含まれます．明らかな誤変換は文脈から直し，フィラーは除いてください．入力に書かれていない事実・感想・予定を付け足さないでください．出力は本文だけにし，前置きや説明は付けないでください．",
+    heading: "出力は必ず「## 」で始まる小見出しから書き始めてください．入力に含まれる話題を判断し，話題が1つなら小見出しを1つ，2つ以上なら話題ごとに小見出しを分けてください．小見出しは内容を表す短い言葉（15文字程度まで）にします．",
+    diary: "一人称の「だ/である」調で，その日の出来事と気持ちが伝わる自然な日記の文章にまとめてください．各小見出しの下には段落で本文を書きます．",
+    research: "研究日誌としてまとめてください．各小見出し（話題）の下に，次の4つの見出しを置き，その下は箇条書きにします：「### やったこと」「### わかったこと」「### 課題」「### 次にやること」．入力に該当する内容がない見出しには「（記載なし）」と書いてください．",
+    weekly: "以下は研究室の学生の直近1週間の研究日誌です．ゼミで報告するための週次報告を，次の見出しを持つ Markdown で作ってください：「## 今週やったこと」「## わかったこと」「## 課題」「## 来週の予定」．重要な点を優先して簡潔にまとめ，各項目の末尾に元になった日付を (11/18) のように付けてください．日誌にないことは書かないでください．出力は本文だけにし，前置きや説明は付けないでください．",
+  };
+  function systemPrompt(kind) {
+    if (kind === "weekly") return PROMPTS.weekly;
+    if (!MODES.includes(kind)) throw new Error("bad kind");
+    return [PROMPTS.common, PROMPTS.heading, PROMPTS[kind]].join("\n\n");
+  }
+  const buildEntryInput = (date, transcript) => `日付: ${date}\n\n${transcript}`;
+  function buildWeeklyInput(entries, range) {
+    const body = entries.map((e) => `### ${e.date}\n${e.summary}`).join("\n\n");
+    return `期間: ${range.start}〜${range.end}\n\n${body}`;
+  }
+  function buildRequest(kind, input, model) {
+    return {
+      model: model || DEFAULT_SETTINGS.model,
+      max_tokens: 16000,
+      output_config: { effort: "low" },
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      system: systemPrompt(kind),
+      messages: [{ role: "user", content: input }],
+    };
+  }
+  /** API 応答から本文を取り出す．{ok, text} または {ok:false, error} */
+  function extractText(response) {
+    if (!response || !Array.isArray(response.content)) return { ok: false, error: "応答が空でした" };
+    if (response.stop_reason === "refusal") return { ok: false, error: "AI がこの内容のまとめを断りました" };
+    const text = response.content.filter((b) => b && b.type === "text").map((b) => b.text).join("").trim();
+    if (!text) return { ok: false, error: "応答が空でした" };
+    return { ok: true, text };
+  }
+  function ensureHeading(text) {
+    const t = String(text).trim();
+    return /^#{1,6}\s/.test(t) ? t : `## メモ\n\n${t}`;
+  }
+
+  // ---- カレンダー（日曜始まり．月外は null） ----
+  function monthGrid(year, month0) {
+    const first = new Date(year, month0, 1);
+    const days = new Date(year, month0 + 1, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < first.getDay(); i++) cells.push(null);
+    for (let d = 1; d <= days; d++) cells.push(`${year}-${pad(month0 + 1)}-${pad(d)}`);
+    while (cells.length % 7) cells.push(null);
+    const weeks = [];
+    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+    return weeks;
+  }
+
+  // ---- 簡易 Markdown（見出し・箇条書き・区切り線・段落．HTML はエスケープ） ----
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function renderMarkdown(md) {
+    const out = [];
+    let para = [], list = [];
+    const flush = () => {
+      if (para.length) { out.push(`<p>${para.map(escapeHtml).join("<br>")}</p>`); para = []; }
+      if (list.length) { out.push(`<ul>${list.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>`); list = []; }
+    };
+    for (const line of String(md || "").split(/\r?\n/)) {
+      const t = line.trim();
+      let m;
+      if (!t) { flush(); continue; }
+      if ((m = t.match(/^(#{1,3})\s+(.*)$/))) { flush(); const lv = m[1].length + 1; out.push(`<h${lv}>${escapeHtml(m[2])}</h${lv}>`); continue; }
+      if ((m = t.match(/^---+(.*)$/))) { flush(); out.push("<hr>"); if (m[1].trim()) out.push(`<p class="sep">${escapeHtml(m[1].trim())}</p>`); continue; }
+      if ((m = t.match(/^[-*]\s+(.*)$/))) { if (para.length) { out.push(`<p>${para.map(escapeHtml).join("<br>")}</p>`); para = []; } list.push(m[1]); continue; }
+      if (list.length) flush();
+      para.push(t);
+    }
+    flush();
+    return out.join("\n");
+  }
+  function preview(md, n) {
+    const t = String(md || "").replace(/^#+\s*/gm, "").replace(/^[-*]\s+/gm, "").replace(/\s+/g, " ").trim();
+    return t.length > n ? t.slice(0, n) + "…" : t;
+  }
+
+  return {
+    ENTRIES_KEY, SETTINGS_KEY, DEFAULT_SETTINGS, MODES, MODE_LABEL, PROMPTS,
+    toDateStr, parseDate, addDays, timeStr, shortDate,
+    loadEntries, saveEntries, loadSettings, saveSettings,
+    entryId, findEntry, separator, rawSummary, nextTranscript, upsertEntry, updateEntry, deleteEntry, sortedEntries,
+    weekRange, selectWeekEntries,
+    systemPrompt, buildEntryInput, buildWeeklyInput, buildRequest, extractText, ensureHeading,
+    monthGrid, escapeHtml, renderMarkdown, preview,
+  };
+})();
+</script>
+
+<script type="module" id="app">
+const C = window.Core;
+const SDK_URL = "https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.4.0/+esm";
+const $ = (id) => document.getElementById(id);
+const store = window.localStorage;
+
+let entries = C.loadEntries(store);
+let settings = C.loadSettings(store);
+const today = () => C.toDateStr(new Date());
+
+function persist() { C.saveEntries(store, entries); }
+function setMsg(el, text, isError) { el.textContent = text || ""; el.classList.toggle("error", !!isError); }
+
+// ---------- Claude API ----------
+let sdkPromise = null;
+async function callClaude(kind, input) {
+  if (!settings.apiKey) throw new Error("APIキーが設定されていません（設定タブ）");
+  sdkPromise = sdkPromise || import(SDK_URL);
+  let Anthropic;
+  try { Anthropic = (await sdkPromise).default; }
+  catch (e) { sdkPromise = null; throw new Error("SDK を読み込めませんでした（ネットワークを確認してください）"); }
+  const client = new Anthropic({ apiKey: settings.apiKey, dangerouslyAllowBrowser: true });
+  let res;
+  try { res = await client.beta.messages.create(C.buildRequest(kind, input, settings.model)); }
+  catch (e) {
+    const status = e && e.status ? `（${e.status}）` : "";
+    const hint = e && e.status === 401 ? "APIキーが正しくありません" : (e && e.message) || "通信に失敗しました";
+    throw new Error(`API エラー${status}：${hint}`);
+  }
+  const r = C.extractText(res);
+  if (!r.ok) throw new Error(r.error);
+  return r.text;
+}
+
+// ---------- 音声認識 ----------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let activeRec = null; // {rec, button, textarea, interimEl, listening}
+
+function stopRec() {
+  if (!activeRec) return;
+  activeRec.listening = false;
+  try { activeRec.rec.stop(); } catch (e) {}
+  activeRec.button.classList.remove("on");
+  activeRec.button.textContent = "● 録音開始";
+  activeRec.interimEl.textContent = "";
+  activeRec = null;
+}
+function startRec(button, textarea, interimEl, msgEl) {
+  if (activeRec) stopRec();
+  const rec = new SR();
+  rec.lang = "ja-JP"; rec.continuous = true; rec.interimResults = true;
+  const state = { rec, button, textarea, interimEl, listening: true };
+  rec.onresult = (ev) => {
+    let interim = "";
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const r = ev.results[i];
+      if (r.isFinal) {
+        const t = r[0].transcript.trim();
+        if (t) textarea.value += (textarea.value && !/\s$/.test(textarea.value) ? "\n" : "") + t;
+      } else interim += r[0].transcript;
+    }
+    interimEl.textContent = interim;
+    textarea.dispatchEvent(new Event("input"));
+  };
+  rec.onerror = (ev) => {
+    if (ev.error === "no-speech" || ev.error === "aborted") return;
+    const m = ev.error === "not-allowed" ? "マイクの使用が許可されていません" : `音声認識エラー：${ev.error}`;
+    setMsg(msgEl, m, true);
+    stopRec();
+  };
+  rec.onend = () => { if (state.listening) { try { rec.start(); } catch (e) { stopRec(); } } };
+  try { rec.start(); } catch (e) { setMsg(msgEl, "録音を開始できませんでした", true); return; }
+  activeRec = state;
+  button.classList.add("on");
+  button.textContent = "■ 録音停止";
+  setMsg(msgEl, "");
+}
+function bindMic(button, textarea, interimEl, msgEl) {
+  if (!SR) { button.disabled = true; button.title = "このブラウザは音声認識に対応していません"; return; }
+  button.addEventListener("click", () => {
+    if (activeRec && activeRec.button === button) stopRec();
+    else startRec(button, textarea, interimEl, msgEl);
+  });
+}
+
+// ---------- 保存の共通処理 ----------
+/** useAI: true でまとめて保存．失敗したら原文保存を提案．保存した entry を返す（中止なら null） */
+async function saveText({ date, mode, text, useAI, msgEl, buttons }) {
+  text = text.trim();
+  if (!text) { setMsg(msgEl, "内容が空です", true); return null; }
+  const now = new Date();
+  const existing = C.findEntry(entries, date, mode);
+  let summary = null;
+  if (useAI) {
+    if (existing && existing.summaryEdited &&
+        !confirm("この記録のまとめは手で直されています．AI でまとめ直すと上書きされます．続けますか？")) return null;
+    buttons.forEach((b) => (b.disabled = true));
+    setMsg(msgEl, "まとめています…");
+    try {
+      summary = await callClaude(mode, C.buildEntryInput(date, C.nextTranscript(existing, text, now)));
+    } catch (e) {
+      setMsg(msgEl, e.message, true);
+      if (!confirm(`${e.message}\n\n原文のまま保存しますか？`)) { refreshButtons(); return null; }
+    } finally { refreshButtons(); }
+  }
+  const r = C.upsertEntry(entries, { date, mode, text, summary, now });
+  entries = r.entries;
+  persist();
+  setMsg(msgEl, `${date} の${C.MODE_LABEL[mode]}に${r.appended ? "追記" : "保存"}しました${summary == null && useAI ? "（原文のまま）" : ""}`);
+  renderBrowse();
+  return r.entry;
+}
+
+// ---------- 記録タブ ----------
+let mode = settings.lastMode === "diary" ? "diary" : "research";
+$("recDate").value = today();
+
+function renderMode() {
+  document.querySelectorAll("#modeSeg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
+  const ex = C.findEntry(entries, $("recDate").value, mode);
+  $("recTarget").textContent = ex ? `この日の${C.MODE_LABEL[mode]}がすでにあります．保存すると追記します．` : "";
+}
+function refreshButtons() {
+  const noKey = !settings.apiKey;
+  for (const id of ["recSummarize", "detailSummarize", "weekGen"]) {
+    $(id).disabled = noKey;
+    $(id).title = noKey ? "設定タブで APIキーを保存してください" : "";
+  }
+  $("recRaw").disabled = false; $("detailRaw").disabled = false;
+}
+document.querySelectorAll("#modeSeg button").forEach((b) => b.addEventListener("click", () => {
+  mode = b.dataset.mode;
+  settings.lastMode = mode; C.saveSettings(store, settings);
+  renderMode();
+}));
+$("recDate").addEventListener("change", renderMode);
+bindMic($("recMic"), $("recText"), $("recInterim"), $("recMsg"));
+if (!SR) $("speechNote").textContent = "このブラウザは音声認識に対応していません．テキストを入力して保存できます（Chrome／Edge 推奨）．";
+
+async function recSave(useAI) {
+  stopRec();
+  const date = $("recDate").value || today();
+  const entry = await saveText({ date, mode, text: $("recText").value, useAI, msgEl: $("recMsg"),
+    buttons: [$("recSummarize"), $("recRaw")] });
+  if (!entry) return;
+  $("recText").value = "";
+  $("recResultTitle").textContent = `${entry.date}・${C.MODE_LABEL[entry.mode]}`;
+  $("recResult").innerHTML = C.renderMarkdown(entry.summary);
+  $("recResultCard").hidden = false;
+  renderMode();
+}
+$("recSummarize").addEventListener("click", () => recSave(true));
+$("recRaw").addEventListener("click", () => recSave(false));
+
+// ---------- 見返すタブ ----------
+const t0 = new Date();
+let calY = t0.getFullYear(), calM = t0.getMonth();
+let detailId = null;
+
+function renderCalendar() {
+  $("calTitle").textContent = `${calY}年${calM + 1}月`;
+  const byDate = {};
+  for (const e of entries) (byDate[e.date] = byDate[e.date] || []).push(e.mode);
+  const cal = $("cal");
+  cal.innerHTML = "";
+  for (const d of ["日", "月", "火", "水", "木", "金", "土"]) {
+    const el = document.createElement("div"); el.className = "dow"; el.textContent = d; cal.appendChild(el);
+  }
+  const td = today();
+  for (const week of C.monthGrid(calY, calM)) for (const date of week) {
+    const b = document.createElement("button");
+    if (!date) { b.className = "empty"; b.tabIndex = -1; cal.appendChild(b); continue; }
+    if (date === td) b.classList.add("today");
+    const modes = byDate[date] || [];
+    b.innerHTML = `<span>${Number(date.slice(8))}</span><span class="dots">${
+      ["research", "diary"].filter((m) => modes.includes(m)).map((m) => `<i class="dot ${m}"></i>`).join("")}</span>`;
+    b.setAttribute("aria-label", `${date} ${modes.map((m) => C.MODE_LABEL[m]).join("・")}`);
+    b.addEventListener("click", () => {
+      const list = ["research", "diary"].filter((m) => modes.includes(m));
+      if (list.length) openDetail(C.entryId(date, list[0]));
+      else { switchTab("record"); $("recDate").value = date; renderMode(); }
+    });
+    cal.appendChild(b);
+  }
+}
+function renderList() {
+  const ul = $("list");
+  ul.innerHTML = "";
+  const items = C.sortedEntries(entries, $("listFilter").value);
+  if (!items.length) { ul.innerHTML = `<li class="muted" style="cursor:default">記録はまだありません</li>`; return; }
+  for (const e of items) {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="tag ${e.mode}">${C.MODE_LABEL[e.mode]}</span><strong>${C.escapeHtml(e.date)}</strong>
+      <div class="muted">${C.escapeHtml(C.preview(e.summary, 80))}</div>`;
+    li.addEventListener("click", () => openDetail(e.id));
+    ul.appendChild(li);
+  }
+}
+function renderBrowse() { renderCalendar(); renderList(); renderMode(); if (detailId) renderDetail(); }
+
+function openDetail(id) {
+  detailId = id;
+  switchTab("browse");
+  renderDetail(true);
+  $("detailCard").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function renderDetail(resetInputs) {
+  const e = entries.find((x) => x.id === detailId);
+  if (!e) { $("detailCard").hidden = true; detailId = null; return; }
+  const other = C.findEntry(entries, e.date, e.mode === "research" ? "diary" : "research");
+  $("detailTitle").innerHTML = `<span class="tag ${e.mode}">${C.MODE_LABEL[e.mode]}</span>${C.escapeHtml(e.date)}` +
+    (other ? ` <button class="btn" id="detailOther" style="padding:2px 10px">${C.MODE_LABEL[other.mode]}を見る</button>` : "");
+  if (other) $("detailOther").addEventListener("click", () => openDetail(other.id));
+  $("detailView").innerHTML = C.renderMarkdown(e.summary);
+  $("detailSummary").value = e.summary;
+  $("detailTranscript").value = e.transcript;
+  if (resetInputs) { $("detailAppend").value = ""; setMsg($("detailMsg"), ""); }
+  $("detailCard").hidden = false;
+}
+$("detailClose").addEventListener("click", () => { stopRec(); detailId = null; $("detailCard").hidden = true; });
+$("detailSave").addEventListener("click", () => {
+  entries = C.updateEntry(entries, detailId, { summary: $("detailSummary").value, transcript: $("detailTranscript").value, now: new Date() });
+  persist(); renderBrowse(); setMsg($("detailMsg"), "保存しました");
+});
+$("detailDelete").addEventListener("click", () => {
+  if (!confirm("この記録を削除します．元に戻せません．よろしいですか？")) return;
+  entries = C.deleteEntry(entries, detailId); persist();
+  detailId = null; $("detailCard").hidden = true; renderBrowse();
+});
+bindMic($("detailMic"), $("detailAppend"), $("detailInterim"), $("detailMsg"));
+async function detailAppend(useAI) {
+  stopRec();
+  const e = entries.find((x) => x.id === detailId);
+  if (!e) return;
+  const saved = await saveText({ date: e.date, mode: e.mode, text: $("detailAppend").value, useAI,
+    msgEl: $("detailMsg"), buttons: [$("detailSummarize"), $("detailRaw")] });
+  if (saved) { $("detailAppend").value = ""; renderDetail(); }
+}
+$("detailSummarize").addEventListener("click", () => detailAppend(true));
+$("detailRaw").addEventListener("click", () => detailAppend(false));
+$("calPrev").addEventListener("click", () => { calM--; if (calM < 0) { calM = 11; calY--; } renderCalendar(); });
+$("calNext").addEventListener("click", () => { calM++; if (calM > 11) { calM = 0; calY++; } renderCalendar(); });
+$("listFilter").addEventListener("change", renderList);
+
+// ---------- 週次報告タブ ----------
+$("weekBase").value = today();
+function renderWeekNote() {
+  const base = $("weekBase").value || today();
+  const r = C.weekRange(base);
+  const n = C.selectWeekEntries(entries, base).length;
+  $("weekRangeNote").textContent = `対象：${r.start}〜${r.end} の研究日誌 ${n} 件`;
+}
+$("weekBase").addEventListener("change", renderWeekNote);
+$("weekGen").addEventListener("click", async () => {
+  const base = $("weekBase").value || today();
+  const list = C.selectWeekEntries(entries, base);
+  if (!list.length) { setMsg($("weekMsg"), "対象の研究日誌がありません", true); return; }
+  $("weekGen").disabled = true;
+  setMsg($("weekMsg"), "生成しています…");
+  try {
+    const text = await callClaude("weekly", C.buildWeeklyInput(list, C.weekRange(base)));
+    $("weekText").value = text;
+    $("weekView").innerHTML = C.renderMarkdown(text);
+    $("weekResultCard").hidden = false;
+    setMsg($("weekMsg"), "");
+  } catch (e) { setMsg($("weekMsg"), e.message, true); }
+  finally { refreshButtons(); }
+});
+$("weekText").addEventListener("input", () => { $("weekView").innerHTML = C.renderMarkdown($("weekText").value); });
+$("weekCopy").addEventListener("click", async () => {
+  const text = $("weekText").value;
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) { const ta = $("weekText"); ta.closest("details").open = true; ta.select(); document.execCommand("copy"); }
+  setMsg($("weekCopyMsg"), "コピーしました");
+  setTimeout(() => setMsg($("weekCopyMsg"), ""), 2000);
+});
+
+// ---------- 設定タブ ----------
+function renderSettings() {
+  $("apiKeyStatus").textContent = settings.apiKey ? "APIキーは保存されています" : "APIキーは未設定です（原文のままなら記録できます）";
+  $("apiKey").value = "";
+  $("model").value = settings.model;
+  refreshButtons();
+}
+$("apiKeySave").addEventListener("click", () => {
+  const v = $("apiKey").value.trim();
+  if (!v) { setMsg($("settingsMsg"), "APIキーを入力してください", true); return; }
+  settings.apiKey = v; C.saveSettings(store, settings); renderSettings(); setMsg($("settingsMsg"), "APIキーを保存しました");
+});
+$("apiKeyDelete").addEventListener("click", () => {
+  settings.apiKey = ""; C.saveSettings(store, settings); renderSettings(); setMsg($("settingsMsg"), "APIキーを削除しました");
+});
+$("modelSave").addEventListener("click", () => {
+  settings.model = $("model").value.trim() || C.DEFAULT_SETTINGS.model;
+  C.saveSettings(store, settings); renderSettings(); setMsg($("settingsMsg"), "モデルを保存しました");
+});
+
+// ---------- タブ ----------
+function switchTab(name) {
+  document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+  for (const t of ["record", "browse", "weekly", "settings"]) $(`tab-${t}`).hidden = t !== name;
+  if (name === "weekly") renderWeekNote();
+}
+document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => { stopRec(); switchTab(b.dataset.tab); }));
+
+renderSettings();
+renderBrowse();
+</script>
+</body>
+</html>
