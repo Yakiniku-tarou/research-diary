@@ -29,9 +29,15 @@ docs/spec.md        仕様書
 - ロジックを足すときは，まず `core` に純粋関数として書いてテストを付け，`app` からはそれを呼ぶだけにする．
 - 仕様を変えたら `docs/spec.md` も同じ commit で更新する．
 - 必要最小限にする．spec の「範囲外」は作らない．
-- 外部スクリプトは jsDelivr から**バージョンを固定して**読み込む（`@anthropic-ai/sdk` だけ）．他のライブラリは追加しない．
+- 外部スクリプトは jsDelivr から**バージョンを固定して**読み込む（`@anthropic-ai/sdk` だけ）．他のライブラリは追加しない．外部のスタイルシートは Google Fonts の「M PLUS Rounded 1c」だけにする．
+- デザインはパステル調で親しみやすく（spec 2.2）．色は `:root` の CSS 変数で定義し，ダークモードも一緒に直す．
+- iPhone の Safari でも使えるようにする（spec 2.1）．入力欄の文字は 16px 以上，押せる部分は高さ 44px 以上にし，safe-area に配慮する．
 - APIキーや個人の日誌データをコード，テスト，commit に含めない．
 - Claude API の model ID，パラメーター，ヘッダーは spec の6章に従う．推測で変えない．
+
+## 公開（iPhone で使うため）
+- GitHub Pages で `index.html` を公開する（main ブランチのルート）．更新は，テストを通して commit したあとに `git push` する．
+- iPhone では公開 URL を Safari で開き，「ホーム画面に追加」して使う．
 
 ## 動かし方
 - `index.html` をブラウザ（Chrome／Edge）で直接開く．マイクの使用を許可する．
